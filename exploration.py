@@ -12,14 +12,22 @@ import scipy.stats as stats
 alpha = 0.05
 
 
-def quantitative_hist_boxplot_describe(training_df, quantitative_col_names):
+def quantitative_hist_boxplot_describe(training_df, quantitative_col_names,separate=True):
     for col in quantitative_col_names:
         training_df[col].hist()
         plt.xlabel(col)
         plt.show()
-    training_df.boxplot(column=quantitative_col_names)
+    
+    if separate:
+        for col in quantitative_col_names:
+            training_df.boxplot(column=col)
+            plt.show()
+    else:    
+        training_df.boxplot(column=quantitative_col_names)
+        plt.show()
+
     print(training_df[quantitative_col_names].describe().T)
-    plt.show()
+    
 
 
 def target_freq_hist_count(training_df, target_col):
@@ -62,7 +70,6 @@ def quant_vs_target_bar(train_df, target_col, quant_col_lst, mean_line=False):
     for axe in axes:
         for ax in axe:
             plots.append(ax)
-    print(plots)
 
     for n in range(len(quant_col_lst)):    
         sns.barplot(ax=plots[n], x=train_df[target_col], y =train_df[quant_col_lst[n]])
@@ -147,9 +154,9 @@ def print_quant_by_target(target_col, training_df, quant_col):
     combo_predic = {}
     for combo in combos:
         combo_predic[combo] = []
-        print(predictors[str(combo)])
+        #print(predictors[str(combo)])
         for predic in predictors[str(combo)]:
-              print(list(predic.keys())[0])
+              #print(list(predic.keys())[0])
               combo_predic[combo].append(list(predic.keys())[0])
 
     return subsets, predictors, p_exceeds_alpha, combo_predic
@@ -168,8 +175,6 @@ def two_quants_by_target_var(target_col, training_df, combo_predic,
             for ax in axe:
                 plots.append(ax)
                 
-                
-        
         predictors_comb = list(itertools.combinations(combo_predic[combo], 2))
     
         for i, pair in enumerate(predictors_comb):
@@ -181,7 +186,7 @@ def two_quants_by_target_var(target_col, training_df, combo_predic,
 def overview(train_df,
              quant_cols,
              target_var):
-    quantitative_hist_boxplot_describe(train_df, quant_cols)
+    quantitative_hist_boxplot_describe(train_df, quant_cols,separate=True)
     target_freq_hist_count(train_df, target_var)
     quant_vs_target_bar(train_df, target_var, quant_cols, mean_line=True)
     describe_quant_grouped_by_target(train_df, quant_cols, target_var)
