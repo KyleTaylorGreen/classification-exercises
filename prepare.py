@@ -37,19 +37,77 @@ def acquire_prep_titanic():
 
     return titanic_df
 
-def prep_telco(telco_df):
-    duplicates = ['contract_type_id', 'payment_type_id', 'internet_service_type_id', 'customer_id']
-    categorical = ['gender', 'partner', 'dependents', 'phone_service', 'multiple_lines', 'online_security', 'online_backup', 'device_protection', 'tech_support', 'streaming_tv', 'streaming_movies', 'paperless_billing', 'churn', 'internet_service_type', 'payment_type', 'contract_type']
-    lst_true = [True] * len(categorical)
-    blanks = telco_df['total_charges'] != ' '
-    telco_df = telco_df[blanks]
+def contains_yes_no(df):
+    categories_to_map = []
+    for col in df.columns:
+        if 'Yes' in df[col].unique():
+            if 'No' in df[col].unique():
+                if len(df[col].unique()) <= 3:
+                    categories_to_map.append(col)
+                
+    return categories_to_map
 
-    telco_df = telco_df.drop(columns=duplicates)
-    dummies_df = pd.get_dummies(telco_df[categorical], dummy_na=False, drop_first=lst_true)
-    dummies_df
+def map_yes_nos(df):
+    categories_to_map = contains_yes_no(df)
+    
+    for col in categories_to_map:
+        df[col] = df[col].map({'Yes': 1, 'No': 0})
+    
+    return df
 
-    telco_df = pd.concat([telco_df, dummies_df], axis=1)
-    return telco_df
+
+def prep_telco(df):
+    """
+    Takes in Telco_Churn Dataframe.
+    Arguments: drops unnecessary columns, converts categorical data.
+    Returns cleaned data.
+    """
+    #drop unneeded columns
+    df.drop(columns=['internet_service_type_id',
+                 'payment_type_id', 'contract_type_id', 'customer_id'], inplace=True)
+    #drop null values stored as whitespace:
+    df['total_charges'] = df['total_charges'].str.strip()
+    df = df[df.total_charges != ""]
+    #convert to correct data type:
+    df['total_charges'] = df.total_charges.astype(float)
+    #Convert binary categorical to numeric
+    df = map_yes_nos(df)
+    df = df.rename(columns={'gender': 'is_female'})
+    df.is_female = df.is_female.map({'Female': 1, 'Male': 0})
+    #Turn NaNs to 'None' 
+    #All NaNs result from lacking a service
+    # ex: online_sec: None because they have no
+    # internet service. 
+    # ex2: multiple_lines: None because they have
+    # no phone service.
+    for col in df.columns:
+        if df[col].isna().sum() > 0:
+            df[col] = df[col].astype('object')
+            df[col] = df[col].fillna('None')
+    
+    #Turning all quantitative dtypes to float64
+    #So I can loop and get them in a list
+    df.tenure = df.tenure.astype('float64')
+
+    quant_cols = []
+    categories= []
+
+    for col in df.columns:
+        if len(df[col].unique()) < 5:
+            categories.append(col)
+        elif df[col].dtype == 'float64':
+            quant_cols.append(col)
+
+    
+    #Get dummies for non-binary categorical variables:
+    # dummy_df = pd.get_dummies(df[['contract_type', 'payment_type',
+    #                           'internet_service_type']],
+    #                           dummy_na = False,
+    #                           drop_first=[True, True, True])
+    #concatenate the two dataframes
+    # df = pd.concat([df, dummy_df], axis=1)
+    return df, categories, quant_cols
+
 
 def acquire_prep_telco():
     telco_df = acquire.get_telco_data()
@@ -60,4 +118,4 @@ def acquire_prep_telco():
 if __name__ == '__main__':
     print(acquire_prepare_iris().head())
     print(acquire_prep_titanic().head())
-    print(acquire_prep_telco().head())
+    print(acquire_prep_telco()[0].head())
