@@ -23,19 +23,27 @@ def acquire_prepare_iris():
 
 def prep_titanic(titanic_df):
     
-    col_drop = ['class', 'deck', 'Unnamed: 0', 'embark_town']
+    titanic_dummy = pd.get_dummies(titanic_df[['embarked', 'sex', ]], dummy_na=False, drop_first=[True, True])
+    titanic_df = pd.concat([titanic_df, titanic_dummy], axis=1)
+    col_drop = ['class', 'deck', 'Unnamed: 0', 'embark_town', 'passenger_id','sex','embarked']
     titanic_df = titanic_df.drop(columns=col_drop)
     print(titanic_df)
-    titanic_dummy = pd.get_dummies(titanic_df[['embarked', 'sex']], dummy_na=False, drop_first=[True, True])
-    titanic_df = pd.concat([titanic_df, titanic_dummy], axis=1)
 
-    return titanic_df
+    categories = []
+    quant_cols = []
+    for col in titanic_df.columns:
+        if titanic_df[col].nunique() < 10:
+            categories.append(col)
+        else:
+            quant_cols.append(col)
+    print(quant_cols)
+    return titanic_df, categories, quant_cols
 
 def acquire_prep_titanic():
     titanic_df = acquire.get_titanic_data()
-    titanic_df = prep_titanic(titanic_df)
+    titanic_df, categories, quant_cols = prep_titanic(titanic_df)
 
-    return titanic_df
+    return titanic_df, categories, quant_cols
 
 def contains_yes_no(df):
     categories_to_map = []
@@ -117,5 +125,5 @@ def acquire_prep_telco():
 
 if __name__ == '__main__':
     print(acquire_prepare_iris().head())
-    print(acquire_prep_titanic().head())
+    print(acquire_prep_titanic()[0].head())
     print(acquire_prep_telco()[0].head())

@@ -10,18 +10,37 @@ import itertools
 import scipy.stats as stats
 
 alpha = 0.05
+fig_size = (10,7)
+
+def create_subplots(quant_cols, single_var=True):
+    subplot_dim = find_subplot_dim(quant_cols)
+    plots= []
+    fig, axes = plt.subplots(subplot_dim[0], subplot_dim[1], figsize=(fig_size[0], fig_size[1]))
+    if len(axes) <= 2:
+        for axe in axes:
+            plots.append(axe)
+    else:
+        for axe in axes:
+            for ax in axe:
+                plots.append(ax)
+
+    return plots, fig
 
 
 def quantitative_hist_boxplot_describe(training_df, quantitative_col_names,separate=True):
-    for col in quantitative_col_names:
-        training_df[col].hist()
-        plt.xlabel(col)
-        plt.show()
+    plots, fig = create_subplots(quantitative_col_names)
+    for i, col in enumerate(quantitative_col_names):
+        plots[i].hist(training_df[col])
+        plots[i].set_xlabel(col)
+        plots[i].set_ylabel('count')
+    plt.show()
     
     if separate:
-        for col in quantitative_col_names:
-            training_df.boxplot(column=col)
-            plt.show()
+        print(type(training_df))
+        plots, axes = create_subplots(quantitative_col_names)
+        for i, col in enumerate(quantitative_col_names):
+            training_df.boxplot(ax=plots[i], column=col)
+        plt.show()
     else:    
         training_df.boxplot(column=quantitative_col_names)
         plt.show()
@@ -67,9 +86,13 @@ def quant_vs_target_bar(train_df, target_col, quant_col_lst, mean_line=False):
     plots = []
     fig, axes = plt.subplots(subplot_dim[0], subplot_dim[1], sharex=True, figsize=(10,5))
     
-    for axe in axes:
-        for ax in axe:
-            plots.append(ax)
+    if len(axes) <= 2:
+        for axe in axes:
+            plots.append(axe)
+    else:
+        for axe in axes:
+            for ax in axe:
+                plots.append(ax)
 
     for n in range(len(quant_col_lst)):    
         sns.barplot(ax=plots[n], x=train_df[target_col], y =train_df[quant_col_lst[n]])
@@ -115,6 +138,7 @@ def mannshitneyu_for_quant_by_target(target_col, training_df,
         #print(f'{pair[0]}/{pair[1]}:' )
         predictors[str(pair)] = []
         for col in quantitative_col:
+            #print(subsets[pair[0]][col])
             t, p = stats.mannwhitneyu(subsets[pair[0]][col], 
                                       subsets[pair[1]][col])
             #print(f'{pair[0]}/{pair[1]} {col}:')
@@ -167,13 +191,16 @@ def two_quants_by_target_var(target_col, training_df, combo_predic,
     for combo in combo_predic.keys():
         subplot_dim= find_subplot_dim(combo_predic[combo])
         
-    
         plots = []
-        fig, axes = plt.subplots(subplot_dim[0], subplot_dim[1], sharex=True, figsize=(10,5))
+        fig, axes = plt.subplots(subplot_dim[0], subplot_dim[1], figsize=(fig_size[0],fig_size[1]))
         
-        for axe in axes:
-            for ax in axe:
-                plots.append(ax)
+        if len(axes) <= 2:
+            for axe in axes:
+                plots.append(axe)
+        else:
+            for axe in axes:
+                for ax in axe:
+                    plots.append(ax)
                 
         predictors_comb = list(itertools.combinations(combo_predic[combo], 2))
     
@@ -181,11 +208,46 @@ def two_quants_by_target_var(target_col, training_df, combo_predic,
             sns.scatterplot(x=training_df[pair[0]], y=training_df[pair[1]],
                            hue=training_df[target_col],
                            ax= plots[i])
+            plots[i].set_xlabel(pair[0])
+            plots[i].set_ylabel(pair[1])
         plt.show()
 
-def overview(train_df,
-             quant_cols,
-             target_var):
+def categorical_comparisons(train_df, categories, target_var):
+    categories_comb = list(itertools.combinations(categories, 2))
+    churn_related = [comb for comb in categories_comb if target_var in comb]
+
+    result_dicts = {}
+    for comb in churn_related:
+        observed = pd.crosstab(train_df[comb[0]], train_df[comb[1]])
+        chi2, p, degf, expected = stats.chi2_contingency(observed)
+
+        result_dicts[comb] = [chi2, p, degf, expected]
+
+    return result_dicts
+
+def filter_category_compar_results(train_df, categories, target_var):
+    results = categorical_comparisons(train_df, categories, target_var)
+    filtered = {}
+
+    for key, values in results.items():
+        if values[1] < alpha and values[1] != 0:
+            filtered.update({key: values})
+
+    sorted_target = []
+    for item in filtered.keys():
+        item = list(item)
+        item.remove(target_var)
+        sorted_target.append(item[0])
+
+    print(f"Categories related to {target_var}:")
+    for elem in sorted_target:
+        print(elem)
+    
+    return sorted_target
+
+
+def overview(train_df, categories,
+             quant_cols, target_var):
     quantitative_hist_boxplot_describe(train_df, quant_cols,separate=True)
     target_freq_hist_count(train_df, target_var)
     quant_vs_target_bar(train_df, target_var, quant_cols, mean_line=True)
@@ -193,4 +255,6 @@ def overview(train_df,
 
     subsets, predictors, p_exceeds_alpha, combos = print_quant_by_target(target_var, train_df, quant_cols)
     two_quants_by_target_var(target_var, train_df, combos)
-
+    sorted_target = filter_category_compar_results(train_df, categories, target_var)
+    
+    sns.pairplot(train_df, hue=target_var)
