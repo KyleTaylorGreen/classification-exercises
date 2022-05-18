@@ -39,44 +39,31 @@ def xy_train_validate_test(train, validate, test, target_var):
 
     return x_train, y_train, x_validate, y_validate, X_test, Y_test
 
-def decision_tree(train, validate, test, target_var, depth=3, loop=False):
+def decision_tree(train, validate, test, target_var, depth=3):
     x_train, y_train, x_validate, y_validate, X_test, Y_test = xy_train_validate_test(train,
                                                                                       validate,
                                                                                       test, 
                                                                                       target_var)
-    models = {}
+    models = []
     y_pred = ''
-    
-    if loop:                                                                                 
-        for num in range(1, depth + 1):
-            clf = DecisionTreeClassifier(max_depth=num, random_state=123)
-            clf = clf.fit(x_train, y_train)
-            models[num] = clf
-            
-            # predictions on train observations
-            y_pred = clf.predict(x_train)
-            # probability for train observations
-            y_pred_proba = clf.predict_proba(x_train)
-            confu_matrix = confusion_matrix(y_train, y_pred)
-            
-            print(f'Classification Report for Tree with {num} depth on training set:\n {classification_report(y_train, y_pred)}')
-            
-            y_pred = clf.predict(x_validate)
-            y_pred_proba = clf.predict_proba(x_validate)
-            confu_matrix = confusion_matrix(y_validate, y_pred)
-
-            print(f'Classification Report for Tree with {num} depth on validate set:\n {classification_report(y_validate, y_pred)}')
-    else:
-        clf = DecisionTreeClassifier(max_depth=depth, random_state=123)
+    a = ''
+    b = ''
+                                                                             
+    for num in range(1, depth + 1):
+        clf = DecisionTreeClassifier(max_depth=num, random_state=123)
         clf = clf.fit(x_train, y_train)
-        models[1] = clf
+        
+        # predictions on train observations
         y_pred = clf.predict(x_train)
-        y_pred_proba = clf.predict_proba(x_train)
-        confu_matrix = confusion_matrix(y_train, y_pred)
-        print(f'Classification Report for Tree with {depth} depth on training set:\n {classification_report(y_train, y_pred)}')
+        a = pd.DataFrame(classification_report(y_train, y_pred, output_dict=True))
         
-        y_pred= clf.predict(x_validate)
+        y_pred = clf.predict(x_validate)
+        b = pd.DataFrame(classification_report(y_validate, y_pred, output_dict=True))
         
-        print(f'Classification Report for Tree with {depth} depth on validate set:\n {classification_report(y_validate, y_pred)}')
+        models.append([a,b])
 
-    
+    return models
+
+def make_model_results_into_df(models):
+    a_df=  pd.DataFrame()
+    #for i, model in enumerate(models):
