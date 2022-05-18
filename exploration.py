@@ -16,14 +16,12 @@ def create_subplots(quant_cols, single_var=True):
     subplot_dim = find_subplot_dim(quant_cols)
     plots= []
     fig, axes = plt.subplots(subplot_dim[0], subplot_dim[1], figsize=(fig_size[0], fig_size[1]))
-    if len(axes) <= 2:
-        for axe in axes:
-            plots.append(axe)
-    else:
-        for axe in axes:
-            for ax in axe:
-                plots.append(ax)
-
+    axes = axes.flatten()
+    
+    for axe in axes:
+        plots.append(axe)
+    
+    print(f'Plots: {plots}')
     return plots, fig
 
 
@@ -86,13 +84,10 @@ def quant_vs_target_bar(train_df, target_col, quant_col_lst, mean_line=False):
     plots = []
     fig, axes = plt.subplots(subplot_dim[0], subplot_dim[1], sharex=True, figsize=(10,5))
     
-    if len(axes) <= 2:
-        for axe in axes:
-            plots.append(axe)
-    else:
-        for axe in axes:
-            for ax in axe:
-                plots.append(ax)
+    axes = axes.flatten()
+    
+    for axe in axes:
+        plots.append(axe)
 
     for n in range(len(quant_col_lst)):    
         sns.barplot(ax=plots[n], x=train_df[target_col], y =train_df[quant_col_lst[n]])
@@ -194,13 +189,10 @@ def two_quants_by_target_var(target_col, training_df, combo_predic,
         plots = []
         fig, axes = plt.subplots(subplot_dim[0], subplot_dim[1], figsize=(fig_size[0],fig_size[1]))
         
-        if len(axes) <= 2:
-            for axe in axes:
-                plots.append(axe)
-        else:
-            for axe in axes:
-                for ax in axe:
-                    plots.append(ax)
+        axes = axes.flatten()
+    
+        for axe in axes:
+            plots.append(axe)
                 
         predictors_comb = list(itertools.combinations(combo_predic[combo], 2))
     
@@ -245,6 +237,19 @@ def filter_category_compar_results(train_df, categories, target_var):
     
     return sorted_target
 
+def dataset_reduction(train_df, target_var, categories, quant_cols):
+    cats_related_to_target = filter_category_compar_results(train_df, categories, target_var)
+    final_df = []
+    for col in quant_cols:
+        final_df.append(col)
+    for cat in cats_related_to_target:
+        final_df.append(cat)
+    final_df.append(target_var)
+
+    final_df = train_df[final_df]
+
+    return final_df
+
 
 def overview(train_df, categories,
              quant_cols, target_var):
@@ -255,6 +260,11 @@ def overview(train_df, categories,
 
     subsets, predictors, p_exceeds_alpha, combos = print_quant_by_target(target_var, train_df, quant_cols)
     two_quants_by_target_var(target_var, train_df, combos)
-    sorted_target = filter_category_compar_results(train_df, categories, target_var)
     
     sns.pairplot(train_df, hue=target_var)
+    final_df = dataset_reduction(train_df,
+                                target_var,
+                                categories,
+                                quant_cols)
+
+    return final_df

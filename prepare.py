@@ -116,6 +116,31 @@ def prep_telco(df):
     # df = pd.concat([df, dummy_df], axis=1)
     return df, categories, quant_cols
 
+def object_columns_to_encode(train_df):
+    object_type = []
+    for col in train_df.columns:
+        if train_df[col].dtype == 'object':
+            object_type.append(col)
+
+    return object_type
+
+def encode_object_columns(train_df, drop_encoded=True):
+    
+    col_to_encode = object_columns_to_encode(train_df)
+    dummy_df = pd.get_dummies(train_df[col_to_encode],
+                              dummy_na=False,
+                              drop_first=[True for col in col_to_encode])
+    train_df = pd.concat([train_df, dummy_df], axis=1)
+    train_df = train_df.drop(columns='Unnamed: 0')
+    
+    if drop_encoded:
+        train_df = drop_encoded_columns(train_df, col_to_encode)
+
+    return train_df
+
+def drop_encoded_columns(train_df, col_to_encode):
+    train_df = train_df.drop(columns=col_to_encode)
+    return train_df
 
 def acquire_prep_telco():
     telco_df = acquire.get_telco_data()
