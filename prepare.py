@@ -27,7 +27,7 @@ def prep_titanic(titanic_df):
     titanic_df = pd.concat([titanic_df, titanic_dummy], axis=1)
     col_drop = ['class', 'deck', 'Unnamed: 0', 'embark_town', 'passenger_id','sex','embarked']
     titanic_df = titanic_df.drop(columns=col_drop)
-    print(titanic_df)
+    #print(titanic_df)
 
     categories = []
     quant_cols = []
@@ -90,6 +90,7 @@ def prep_telco(df):
     # no phone service.
     for col in df.columns:
         if df[col].isna().sum() > 0:
+            print(col)
             df[col] = df[col].astype('object')
             df[col] = df[col].fillna('None')
     
@@ -99,6 +100,8 @@ def prep_telco(df):
 
     quant_cols = []
     categories= []
+
+    df = encode_object_columns(df)
 
     for col in df.columns:
         if len(df[col].unique()) < 5:
@@ -116,13 +119,6 @@ def prep_telco(df):
     # df = pd.concat([df, dummy_df], axis=1)
     return df, categories, quant_cols
 
-def object_columns_to_encode(train_df):
-    object_type = []
-    for col in train_df.columns:
-        if train_df[col].dtype == 'object':
-            object_type.append(col)
-
-    return object_type
 
 def encode_object_columns(train_df, drop_encoded=True):
     
@@ -138,15 +134,23 @@ def encode_object_columns(train_df, drop_encoded=True):
 
     return train_df
 
+def object_columns_to_encode(train_df):
+    object_type = []
+    for col in train_df.columns:
+        if train_df[col].dtype == 'object':
+            object_type.append(col)
+
+    return object_type
+
 def drop_encoded_columns(train_df, col_to_encode):
     train_df = train_df.drop(columns=col_to_encode)
     return train_df
 
 def acquire_prep_telco():
     telco_df = acquire.get_telco_data()
-    telco_df = prep_telco(telco_df)
+    telco_df, categories, quant_cols = prep_telco(telco_df)
 
-    return telco_df
+    return telco_df, categories, quant_cols
 
 if __name__ == '__main__':
     print(acquire_prepare_iris().head())
