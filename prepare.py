@@ -1,12 +1,13 @@
 import pandas as pd
 import acquire
+import numpy as np
+from scipy import stats
 
 def prep_iris(iris_df):
     iris_data = iris_df
     col_drop = ['species_id', 'measurement_id']
     iris_data = iris_data.drop(columns=col_drop)
     
-
     iris_data = iris_data.rename(columns={'species_name': 'species'})
     print(iris_data.head())
     
@@ -92,11 +93,12 @@ def prep_telco(df):
         if df[col].isna().sum() > 0:
             print(col)
             df[col] = df[col].astype('object')
-            df[col] = df[col].fillna('None')
+            df[col] = df[col].fillna(0)
     
     #Turning all quantitative dtypes to float64
     #So I can loop and get them in a list
     df.tenure = df.tenure.astype('float64')
+    df = df[df.tenure>0]
 
     quant_cols = []
     categories= []
@@ -109,7 +111,6 @@ def prep_telco(df):
         elif df[col].dtype == 'float64':
             quant_cols.append(col)
 
-    
     #Get dummies for non-binary categorical variables:
     # dummy_df = pd.get_dummies(df[['contract_type', 'payment_type',
     #                           'internet_service_type']],
@@ -118,6 +119,17 @@ def prep_telco(df):
     #concatenate the two dataframes
     # df = pd.concat([df, dummy_df], axis=1)
     return df, categories, quant_cols
+
+def remove_outliers(threshold, quant_cols, df):
+    z = np.abs((stats.zscore(df[quant_cols])))
+
+    df_without_outliers=  df[(z < threshold).all(axis=1)]
+    print(df.shape)
+    print(df_without_outliers.shape)
+
+    return df_without_outliers
+
+
 
 
 def encode_object_columns(train_df, drop_encoded=True):
