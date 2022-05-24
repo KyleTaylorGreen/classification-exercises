@@ -31,23 +31,40 @@ def impute_value(train, validate, test, col_names, strategy='most_frequent'):
 
     return train, validate, test
 
+def all_reports(train, validate, test, target_var):
+    models, reports = decision_tree(train, validate, test, target_var)
+    dt_mods = Results(models, reports, target_var)
+    
+    models, reports = random_forests(train, validate, test, target_var)
+    rf_mods = Results(models, reports, target_var)
+    
+    models, reports = knearest_neightbors(train, validate, test, target_var)
+    knn_mods = Results(models, reports, target_var)
 
+    models, reports = logistic_regression(train, validate, test, target_var)
+    lr_mods = Results(models, reports, target_var)
+    
+
+
+    return dt_mods, rf_mods, knn_mods, lr_mods
 
 def xy_train_validate_test(train, validate, test, target_var):
+
+    id= 'customer_id'
     
-    x_train = train.drop(columns=[target_var])
+    x_train = train.drop(columns=[target_var, id])
     y_train = train[target_var]
 
-    x_validate = validate.drop(columns=[target_var])
+    x_validate = validate.drop(columns=[target_var, id])
     y_validate = validate[target_var]
 
-    X_test = test.drop(columns=[target_var])
+    X_test = test.drop(columns=[target_var, id])
     Y_test = test[target_var]
 
     return x_train, y_train, x_validate, y_validate, X_test, Y_test
 
 def random_forests(train, validate, test, target_var, 
-                   min_sample_leaf=3, depth=3, inverse=False):
+                   min_sample_leaf=3, depth=15, inverse=True):
     x_train, y_train, x_validate, y_validate, X_test, Y_test = xy_train_validate_test(train,
                                                                                       validate,
                                                                                       test, 
@@ -71,7 +88,7 @@ def random_forests(train, validate, test, target_var,
     
     return models, reports
 
-def knearest_neightbors(train, validate, test, target_var, n_neighbors):
+def knearest_neightbors(train, validate, test, target_var, n_neighbors=list(range(1,15))):
     x_train, y_train, x_validate, y_validate, X_test, Y_test = xy_train_validate_test(train,
                                                                                       validate,
                                                                                       test, 
@@ -93,7 +110,7 @@ def knearest_neightbors(train, validate, test, target_var, n_neighbors):
     return models, reports
 
 
-def decision_tree(train, validate, test, target_var, depth=3, loop=False):
+def decision_tree(train, validate, test, target_var, depth=10, loop=True):
     x_train, y_train, x_validate, y_validate, X_test, Y_test = xy_train_validate_test(train,
                                                                                       validate,
                                                                                       test, 
@@ -118,7 +135,7 @@ def decision_tree(train, validate, test, target_var, depth=3, loop=False):
     return models, reports
 
 
-def logistic_regression(train, validate, test, target_var, c, solver='lbfgs'):
+def logistic_regression(train, validate, test, target_var, c=10, solver='lbfgs'):
     x_train, y_train, x_validate, y_validate, X_test, Y_test = xy_train_validate_test(train,
                                                                                       validate,
                                                                                       test,
@@ -130,10 +147,9 @@ def logistic_regression(train, validate, test, target_var, c, solver='lbfgs'):
     fit_intercept = False
     if solver=='liblinear':
         fit_intercept=True
-
-                                                                             
-    for num in np.arange((c/c)/10, c+.1, .1):
-        logit = LogisticRegression(C=c, random_state=123, fit_intercept=fit_intercept, intercept_scaling=num+(c/7.5), solver=solver)
+                                                                 
+    for num in np.arange(.1, c+.1, .1):
+        logit = LogisticRegression(C=c, random_state=123, fit_intercept=fit_intercept, intercept_scaling=7.5, solver=solver)
         models.append(fit_score_train_validate(logit, num, x_train, x_validate, y_train, y_validate, model_type)[0])
         reports.append(fit_score_train_validate(logit, num, x_train, x_validate, y_train, y_validate, model_type)[1])
     

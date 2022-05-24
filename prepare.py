@@ -1,3 +1,4 @@
+from base64 import encode
 import pandas as pd
 import acquire
 import numpy as np
@@ -66,6 +67,8 @@ def map_yes_nos(df):
 
 
 def prep_telco(df):
+    
+    unencoded_df = df.copy()
     """
     Takes in Telco_Churn Dataframe.
     Arguments: drops unnecessary columns, converts categorical data.
@@ -74,11 +77,16 @@ def prep_telco(df):
     #drop unneeded columns
     df.drop(columns=['internet_service_type_id',
                  'payment_type_id', 'contract_type_id', 'customer_id'], inplace=True)
+    unencoded_df.drop(columns=['internet_service_type_id',
+                 'payment_type_id', 'contract_type_id'], inplace=True)
     #drop null values stored as whitespace:
     df['total_charges'] = df['total_charges'].str.strip()
     df = df[df.total_charges != ""]
+    unencoded_df['total_charges'] = unencoded_df['total_charges'].str.strip()
+    unencoded_df = unencoded_df[unencoded_df.total_charges != ""]
     #convert to correct data type:
     df['total_charges'] = df.total_charges.astype(float)
+    unencoded_df['total_charges'] = unencoded_df.total_charges.astype(float)
     #Convert binary categorical to numeric
     df = map_yes_nos(df)
     df = df.rename(columns={'gender': 'is_female'})
@@ -91,10 +99,16 @@ def prep_telco(df):
     # no phone service.
     for col in df.columns:
         if df[col].isna().sum() > 0:
-            print(col)
+           # print(col)
             df[col] = df[col].astype('object')
             df[col] = df[col].fillna(0)
     
+    for col in unencoded_df.columns:
+        if unencoded_df[col].isna().sum() > 0:
+            #print(col)
+            unencoded_df[col] = unencoded_df[col].astype('object')
+            unencoded_df[col] = unencoded_df[col].fillna(0)
+
     #Turning all quantitative dtypes to float64
     #So I can loop and get them in a list
     df.tenure = df.tenure.astype('float64')
@@ -118,7 +132,8 @@ def prep_telco(df):
     #                           drop_first=[True, True, True])
     #concatenate the two dataframes
     # df = pd.concat([df, dummy_df], axis=1)
-    return df, categories, quant_cols
+    #df['customer_id'] = unencoded_df['customer_id']
+    return df, categories, quant_cols, unencoded_df
 
 def remove_outliers(threshold, quant_cols, df):
     z = np.abs((stats.zscore(df[quant_cols])))
@@ -129,8 +144,17 @@ def remove_outliers(threshold, quant_cols, df):
 
     return df_without_outliers
 
+def encode_train_validate_test(df, train, validate, test):
+    
+    train = encode_object_columns(train)
+    validate = encode_object_columns(validate)
+    test = encode_object_columns(test)
 
+    train['customer_id'] = df['customer_id']
+    validate['customer_id'] = df['customer_id']
+    test['customer_id'] = df['customer_id']
 
+    return train, validate, test
 
 def encode_object_columns(train_df, drop_encoded=True):
     
@@ -160,9 +184,9 @@ def drop_encoded_columns(train_df, col_to_encode):
 
 def acquire_prep_telco():
     telco_df = acquire.get_telco_data()
-    telco_df, categories, quant_cols = prep_telco(telco_df)
+    telco_df, categories, quant_cols, unencoded_df = prep_telco(telco_df)
 
-    return telco_df, categories, quant_cols
+    return telco_df, categories, quant_cols, unencoded_df
 
 if __name__ == '__main__':
     print(acquire_prepare_iris().head())

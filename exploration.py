@@ -239,7 +239,7 @@ def filter_category_compar_results(train_df, categories, target_var):
 
 def dataset_reduction(train_df, target_var, categories, quant_cols):
     cats_related_to_target = filter_category_compar_results(train_df, categories, target_var)
-    final_df = []
+    final_df = ['customer_id']
     for col in quant_cols:
         final_df.append(col)
     for cat in cats_related_to_target:
